@@ -8,6 +8,10 @@
 namespace rmrevin\yii\minify;
 
 use yii\helpers;
+use backend\models\Block;
+use backend\models\Page;
+use Yii;
+use yii\web\BadRequestHttpException;
 
 /**
  * Class View
@@ -15,6 +19,9 @@ use yii\helpers;
  */
 class View extends \yii\web\View
 {
+    
+    public $description;
+    public $pageIcon;
 
     /** @var bool */
     public $enableMinify = true;
@@ -503,5 +510,47 @@ class View extends \yii\web\View
         }
 
         return sha1($result);
+    }
+     public function loadBlock($name, $isGlobal = false)
+    {
+        if (is_null($name)) {
+            throw new BadRequestHttpException('Block name not specified.');
+        }
+
+        $find = [
+            'title' => $name,
+        ];
+
+        if ($isGlobal === false) {
+            //if not global
+            if (isset($this->params['block']['id'])) {
+                $find['parent'] = $this->params['block']['id'];
+            }
+            if (isset($this->params['block']['layout'])) {
+                $find['parent_layout'] = $this->params['block']['layout'];
+            }
+
+            if (isset($this->params['block']['slug'])) {
+                //get parent page id
+                /**
+                 * @var $page \backend\models\Page
+                 */
+                if ($page = Page::findOne([
+                    'slug' => $this->params['block']['slug'],
+                ])) {
+                    $find['parent'] = $page->id;
+                }
+            }
+        }
+
+        /**
+         * @var $block \backend\models\Block
+         */
+        if ($block = Block::findOne($find)) {
+            //if block found
+            return $block->render();
+        }
+
+        return false;
     }
 }
